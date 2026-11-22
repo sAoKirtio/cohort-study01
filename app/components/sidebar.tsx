@@ -38,6 +38,8 @@ interface RecentCourse {
 }
 
 interface SidebarProps {
+  brandAction?: React.ReactNode;
+  navAction?: React.ReactNode;
   currentUser: CurrentUser | null;
   recentCourses?: RecentCourse[];
   isTeamAdmin?: boolean;
@@ -114,6 +116,8 @@ function isVisible(item: NavItem, role: UserRole | null): boolean {
 }
 
 export function Sidebar({
+  brandAction,
+  navAction,
   currentUser,
   recentCourses = [],
   isTeamAdmin = false,
@@ -140,6 +144,7 @@ export function Sidebar({
         <NavLink to="/" className="text-lg font-bold tracking-tight">
           Cadence
         </NavLink>
+        {brandAction}
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
@@ -162,6 +167,7 @@ export function Sidebar({
               {item.label}
             </NavLink>
           ))}
+        {navAction}
         {isTeamAdmin && (
           <NavLink
             to="/team"

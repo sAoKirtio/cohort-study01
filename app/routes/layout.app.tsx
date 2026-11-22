@@ -1,5 +1,6 @@
-import { Outlet } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import type { Route } from "./+types/layout.app";
+import { NotificationPrototype } from "~/components/notification-prototype";
 import { Sidebar } from "~/components/sidebar";
 import { DevUI } from "~/components/dev-ui";
 import { Toaster } from "sonner";
@@ -226,6 +227,12 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
     countries,
     isTeamAdmin: userIsTeamAdmin,
   } = loaderData;
+
+  const location = useLocation();
+  const variant = new URLSearchParams(location.search).get("variant");
+  if (import.meta.env.DEV && location.pathname === "/courses" && (variant === "bell" || variant === "center")) {
+    return <NotificationPrototype variant={variant}><Outlet /></NotificationPrototype>;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">
