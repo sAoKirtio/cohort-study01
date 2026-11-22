@@ -1,4 +1,4 @@
-// Two throwaway notification surfaces on /courses?variant=bell|center.
+// Throwaway comparison and the selected combined flow on the course catalog.
 import {
   useCallback,
   useEffect,
@@ -26,7 +26,13 @@ import {
 } from "./notification-prototype-data";
 import "./notification-prototype.css";
 
-type Variant = "bell" | "center";
+const variants = ["bell", "center", "combined"] as const;
+type Variant = (typeof variants)[number];
+const variantNames = {
+  bell: "A · 铃铛列表",
+  center: "B · 独立通知中心",
+  combined: "C · 铃铛和通知中心",
+};
 const states = {
   normal: "有通知",
   empty: "空列表",
@@ -45,6 +51,7 @@ export function NotificationPrototype({
   const [, setParams] = useSearchParams();
   const [person, setPerson] = useState<Recipient>("emma");
   const [mode, setMode] = useState<FeedState>("normal");
+  const [fullList, setFullList] = useState(false);
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<Example>();
   const [read, setRead] = useState<Set<string>>(new Set());
@@ -56,24 +63,34 @@ export function NotificationPrototype({
   const unread =
     mode === "empty" ? 0 : items.filter((item) => !read.has(item.id)).length;
   const loaded = mode === "normal" || mode === "empty";
-  const bell = variant === "bell";
+  const bellEntry = variant !== "center";
+  const popover = bellEntry && !(variant === "combined" && fullList);
+  const recentPreview = variant === "combined" && popover;
+  const visibleItems = recentPreview ? items.slice(0, 2) : items;
 
   function closeFeed() {
     setOpen(false);
     entry.current?.focus();
   }
 
-  const switchVariant = useCallback(() => {
-    setTarget(undefined);
-    setOpen(false);
-    setParams(
-      (params) => {
-        params.set("variant", variant === "bell" ? "center" : "bell");
-        return params;
-      },
-      { replace: true }
-    );
-  }, [variant, setParams]);
+  const switchVariant = useCallback(
+    (direction: number) => {
+      setFullList(false);
+      setTarget(undefined);
+      setOpen(false);
+      setParams(
+        (params) => {
+          const next =
+            (variants.indexOf(variant) + direction + variants.length) %
+            variants.length;
+          params.set("variant", variants[next]);
+          return params;
+        },
+        { replace: true }
+      );
+    },
+    [variant, setParams]
+  );
 
   useEffect(() => {
     function key(event: KeyboardEvent) {
@@ -85,12 +102,12 @@ export function NotificationPrototype({
         return;
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         event.preventDefault();
-        switchVariant();
+        switchVariant(event.key === "ArrowLeft" ? -1 : 1);
       }
     }
     function outside(event: PointerEvent) {
       if (
-        bell &&
+        popover &&
         open &&
         event.target instanceof Element &&
         !event.target.closest(".np-panel,.np-entry,.np-tools")
@@ -103,7 +120,7 @@ export function NotificationPrototype({
       document.removeEventListener("keydown", key);
       document.removeEventListener("pointerdown", outside);
     };
-  }, [bell, open, switchVariant]);
+  }, [popover, open, switchVariant]);
 
   useEffect(() => {
     if (open) panel.current?.focus();
@@ -120,7 +137,7 @@ export function NotificationPrototype({
     );
     for (const row of list.current.children) observer.observe(row);
     return () => observer.disconnect();
-  }, [open, mode, person, variant]);
+  }, [open, mode, person, variant, popover]);
 
   function markRead(item: Example) {
     setRead((previous) => new Set([...previous, item.id]));
@@ -135,30 +152,31 @@ export function NotificationPrototype({
   const entryButton = (
     <button
       ref={entry}
-      className={"np-entry " + (bell ? "np-bell" : "np-nav")}
+      className={"np-entry " + (bellEntry ? "np-bell" : "np-nav")}
       aria-label={loaded ? "通知，" + unread + " 条未读" : "通知"}
-      aria-expanded={open}
+      aria-expanded={open && (!bellEntry || popover)}
       onClick={() => {
         setTarget(undefined);
-        setOpen(!open);
+        setFullList(false);
+        setOpen(!(open && (!bellEntry || popover)));
       }}
     >
       <Bell size={19} />
-      {!bell && "通知中心"}
+      {!bellEntry && "通知中心"}
       {loaded && unread > 0 && <b>{unread}</b>}
     </button>
   );
 
   const feed = (
     <section
-      className={bell ? "np-panel" : "np-center"}
-      aria-label={bell ? "通知列表" : "通知中心"}
+      className={popover ? "np-panel" : "np-center"}
+      aria-label={popover ? "通知列表" : "通知中心"}
       tabIndex={-1}
       ref={panel}
     >
       <header>
         <div>
-          <h1>{bell ? "通知" : "通知中心"}</h1>
+          <h1>{recentPreview ? "最近通知" : popover ? "通知" : "通知中心"}</h1>
           <small>
             {recipients[person]}
             {loaded && " · " + unread + " 条未读"}
@@ -190,7 +208,7 @@ export function NotificationPrototype({
       )}
       {mode === "normal" && (
         <ul ref={list}>
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const title = (
               <>
                 <strong>{item.title}</strong>
@@ -229,17 +247,22 @@ export function NotificationPrototype({
           })}
         </ul>
       )}
+      {recentPreview && (
+        <button className="np-view-all" onClick={() => setFullList(true)}>
+          查看全部 <ChevronRight size={16} />
+        </button>
+      )}
     </section>
   );
 
   const tools = (
     <div className="np-tools" aria-label="原型控制">
       <div className="np-variants">
-        <button aria-label="上一方案" onClick={switchVariant}>
+        <button aria-label="上一方案" onClick={() => switchVariant(-1)}>
           <ChevronLeft size={18} />
         </button>
-        <strong>{bell ? "A · 铃铛列表" : "B · 独立通知中心"}</strong>
-        <button aria-label="下一方案" onClick={switchVariant}>
+        <strong>{variantNames[variant]}</strong>
+        <button aria-label="下一方案" onClick={() => switchVariant(1)}>
           <ChevronRight size={18} />
         </button>
       </div>
@@ -302,11 +325,11 @@ export function NotificationPrototype({
           avatarUrl: null,
         }}
         isTeamAdmin={person === "marta"}
-        brandAction={bell && entryButton}
-        navAction={!bell && entryButton}
+        brandAction={bellEntry && entryButton}
+        navAction={!bellEntry && entryButton}
       />
       <main className="min-w-0 flex-1 overflow-y-auto pb-36">
-        {open && !bell ? (
+        {open && !popover ? (
           feed
         ) : target ? (
           <section className="np-detail" key={target.id}>
@@ -330,7 +353,7 @@ export function NotificationPrototype({
           children
         )}
       </main>
-      {open && bell && feed}
+      {open && popover && feed}
       {tools}
     </div>
   );

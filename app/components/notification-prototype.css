@@ -235,3 +235,16 @@
     padding: 0.5rem;
   }
 }
+
+.np-view-all {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.np-view-all:hover {
+  background: var(--muted);
+}

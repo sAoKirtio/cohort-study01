@@ -230,7 +230,7 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
 
   const location = useLocation();
   const variant = new URLSearchParams(location.search).get("variant");
-  if (import.meta.env.DEV && location.pathname === "/courses" && (variant === "bell" || variant === "center")) {
+  if (import.meta.env.DEV && location.pathname === "/courses" && (variant === "bell" || variant === "center" || variant === "combined")) {
     return <NotificationPrototype variant={variant}><Outlet /></NotificationPrototype>;
   }
 
