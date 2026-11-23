@@ -1817,6 +1817,18 @@ This course is still in draft while the cluster examples are rewritten against t
 
   console.log(`Created ${countRows(schema.enrollments)} enrollments.`);
 
+  const savedLesson = {
+    userId: studentByEmail("emma.wilson@student.dev").id,
+    lessonId: course1LessonIds[2],
+  };
+  db.insert(schema.bookmarks).values(savedLesson).run();
+  db.insert(schema.notes)
+    .values({
+      ...savedLesson,
+      body: "Use npx to run the compiler installed in this project.",
+    })
+    .run();
+
   // ─── Course Ratings ───
   // Star ratings from enrolled students only. Not everyone rates.
   // Course 1 averages 4.3 (4 ratings), course 2 averages 4.5 (2 ratings).
@@ -2848,6 +2860,9 @@ This course is still in draft while the cluster examples are rewritten against t
   );
   console.log(`  Enrollments: ${countRows(schema.enrollments)}`);
   console.log(`  Course ratings: ${countRows(schema.courseRatings)}`);
+  console.log(
+    `  Bookmarks: ${countRows(schema.bookmarks)}, notes: ${countRows(schema.notes)}`
+  );
   console.log(`  Lesson comments: ${countRows(schema.comments)}`);
   console.log(
     `  Lesson progress: ${countRows(schema.lessonProgress)} (${countRows(schema.lessonProgress, eq(schema.lessonProgress.status, LessonProgressStatus.Completed))} completed)`
